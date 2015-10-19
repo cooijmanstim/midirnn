@@ -52,7 +52,9 @@ def get_dataset(which_set):
 
 def get_stream(which_set, shuffle=True, max_examples=None, batch_size=10):
     dataset = get_dataset(which_set)
-    num_examples = min(max_examples, dataset.num_examples)
+    num_examples = dataset.num_examples
+    if max_examples:
+        num_examples = min(max_examples, num_examples)
     stream = fuel.streams.DataStream.default_stream(dataset=dataset)
     stream = fuel.transformers.ForceFloatX(stream)
     stream = fuel.transformers.Batch(
