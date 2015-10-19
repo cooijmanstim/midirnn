@@ -35,7 +35,7 @@ def main():
         dims=[input_dim, intermediate_dim, 4*recurrent_dim],
         activations=[blocks.bricks.Rectifier(), blocks.bricks.Identity()],
         weights_init=blocks.initialization.Orthogonal(),
-        biases_init=blocks.initialization.Constant(1))
+        biases_init=blocks.initialization.Constant(0))
     lstm = blocks.bricks.recurrent.LSTM(
         dim=recurrent_dim,
         weights_init=blocks.initialization.Uniform(std=1e-2),
@@ -50,6 +50,9 @@ def main():
     x_to_h.initialize()
     lstm.initialize()
     h_to_y.initialize()
+
+    blocks.initialization.Constant(1).initialize(
+        x_to_h.linear_transformations[-1].b, None)
 
     orthogonal = blocks.initialization.Orthogonal()
     W_state = lstm.W_state.get_value()
