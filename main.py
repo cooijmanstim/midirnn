@@ -88,26 +88,33 @@ def main():
 
     ys = predict(xs)
     errors = (ys[:-1] - xs[1:])**2 * mask[1:]
-    cost = errors.mean()
+    cost = (errors.sum(axis=0) / mask.sum(axis=0)).mean()
     cost.name = "cost"
 
     graph = blocks.graph.ComputationGraph(cost)
+    model = blocks.model.Model(cost)
+    algorithm=blocks.algorithms.GradientDescent(
+        cost=cost,
+        parameters=graph.parameters,
+        step_rule=blocks.algorithms.Adam())
+
+    step_channels = []
+    for key, parameter in model.get_parameter_dict().items():
+        step_channels.append(algorithm.steps[parameter].norm(2)
+                             .copy(name="step_norm:%s" % key))
+
     monitors = [
         blocks.extensions.monitoring.DataStreamMonitoring(
-            graph.outputs,
+            graph.outputs + (step_channels if which_set == "train" else []),
             data_stream=dataset.get_stream(which_set, max_examples=100),
             prefix=which_set,
             after_epoch=True)
         for which_set in "train test".split()]
     main_loop = blocks.main_loop.MainLoop(
         data_stream=dataset.get_stream("train"),
-        model=blocks.model.Model(cost),
-        algorithm=blocks.algorithms.GradientDescent(
-            cost=cost,
-            parameters=graph.parameters,
-            step_rule=blocks.algorithms.Adam()),
+        model=model, algorithm=algorithm,
         extensions=(monitors + [
-            blocks.extensions.FinishAfter(after_n_epochs=10),
+            blocks.extensions.FinishAfter(after_n_epochs=100),
             blocks.extensions.ProgressBar(),
             blocks.extensions.Printing(),
             extensions.Generate(
