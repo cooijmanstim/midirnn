@@ -27,7 +27,7 @@ class MidiFiles(fuel.datasets.Dataset):
 
                 # TODO: maybe transpose to canonical key
                 # get everything except drums
-                x = midi_data.get_piano_roll(fs=10)
+                x = midi_data.get_piano_roll(fs=1)
                 # TODO: create a separate roll with onsets
                 # TODO: include drums somehow (e.g. one pitchless channel with onsets only)
 
