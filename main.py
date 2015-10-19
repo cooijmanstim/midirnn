@@ -69,8 +69,7 @@ def main():
         [ys, hs, cs], _ = theano.scan(
             stepfn,
             sequences=[xs],
-            outputs_info=[None] + lstm.initial_states(xs.shape[1]),
-            truncate_gradient=20)
+            outputs_info=[None] + lstm.initial_states(xs.shape[1]))
         return ys
 
     def generate(xs):
