@@ -50,6 +50,13 @@ def main():
     lstm.initialize()
     h_to_y.initialize()
 
+    orthogonal = blocks.initialization.Orthogonal()
+    W_state = lstm.W_state.get_value()
+    for i in range(4):
+        W_state[:, i*recurrent_dim:(i+1)*recurrent_dim] = orthogonal.generate(
+            lstm.rng, (recurrent_dim, recurrent_dim))
+    lstm.W_state.set_value(W_state)
+
     def stepfn(x, h, c):
         u = x_to_h.apply(x)
         h, c = lstm.apply(
