@@ -27,22 +27,23 @@ def main():
     mask = mask.dimshuffle(1, 0, 2)
 
     input_dim = 128
-    recurrent_dim = 128
+    intermediate_dim = 256
+    recurrent_dim = 256
 
     x_to_h = blocks.bricks.MLP(
         name="x_to_h",
-        dims=[input_dim, 4*recurrent_dim],
-        activations=[blocks.bricks.Identity()],
+        dims=[input_dim, intermediate_dim, 4*recurrent_dim],
+        activations=[blocks.bricks.Rectifier(), blocks.bricks.Identity()],
         weights_init=blocks.initialization.Orthogonal(),
-        biases_init=blocks.initialization.Constant(0))
+        biases_init=blocks.initialization.Constant(1))
     lstm = blocks.bricks.recurrent.LSTM(
         dim=recurrent_dim,
         weights_init=blocks.initialization.Uniform(std=1e-2),
         biases_init=blocks.initialization.Constant(0))
     h_to_y = blocks.bricks.MLP(
         name="h_to_y",
-        dims=[recurrent_dim, input_dim],
-        activations=[blocks.bricks.Rectifier()],
+        dims=[recurrent_dim, intermediate_dim, input_dim],
+        activations=[blocks.bricks.Rectifier(), blocks.bricks.Rectifier()],
         weights_init=blocks.initialization.Orthogonal(),
         biases_init=blocks.initialization.Constant(0))
 
