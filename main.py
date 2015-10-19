@@ -71,7 +71,7 @@ def main():
             stepfn,
             sequences=[xs],
             outputs_info=[None] + lstm.initial_states(xs.shape[1]))
-        return ys
+        return ys, hs, cs
 
     def generate(xs):
         # initialize hidden state based on xs
@@ -86,14 +86,14 @@ def main():
             outputs_info=[ys[-1], hs[-1], cs[-1]])
         return ys
 
-    ys = predict(xs)
+    ys, hs, cs = predict(xs)
     errors = (ys[:-1] - xs[1:])**2 * mask[1:]
     cost = (errors.sum(axis=0) / mask.sum(axis=0)).mean()
     cost.name = "cost"
 
     graph = blocks.graph.ComputationGraph(cost)
     model = blocks.model.Model(cost)
-    algorithm=blocks.algorithms.GradientDescent(
+    algorithm = blocks.algorithms.GradientDescent(
         cost=cost,
         parameters=graph.parameters,
         step_rule=blocks.algorithms.Adam())
@@ -103,9 +103,13 @@ def main():
         step_channels.append(algorithm.steps[parameter].norm(2)
                              .copy(name="step_norm:%s" % key))
 
+    activations = [
+        hs.mean().copy(name="states.mean"),
+        cs.mean().copy(name="cells.mean")]
+
     monitors = [
         blocks.extensions.monitoring.DataStreamMonitoring(
-            graph.outputs + (step_channels if which_set == "train" else []),
+            graph.outputs + activations + (step_channels if which_set == "train" else []),
             data_stream=dataset.get_stream(which_set, max_examples=100),
             prefix=which_set,
             after_epoch=True)
