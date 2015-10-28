@@ -1,5 +1,7 @@
 import os, glob
 import logging
+import cPickle as pickle
+import numpy as np
 import fuel.datasets, fuel.streams, fuel.schemes, fuel.transformers
 from picklable_itertools import iter_, chain
 import pretty_midi
@@ -33,7 +35,6 @@ class MidiFiles(fuel.datasets.Dataset):
 
                 # time axis first
                 x = x.T
-
                 return (x,)
             except Exception as e:
                 logger.warning("skipping %s: %s" % (os.path.basename(file), e))
@@ -44,14 +45,64 @@ class MidiFiles(fuel.datasets.Dataset):
     def num_examples(self):
         return len(self.files)
 
+
+class PianoRolls(fuel.datasets.Dataset):
+    provides_sources = ('features',)
+    example_iteration_scheme = None
+
+    def __init__(self, piano_rolls):
+        self.piano_rolls = piano_rolls
+        super(PianoRolls, self).__init__()
+        self.piano_roll_dim = 128
+
+    def open(self):
+        return iter_(self.piano_rolls)
+
+    def get_data(self, state=None, request=None):
+        if state is None:
+            raise ValueError
+
+        if request is not None:
+            raise ValueError
+
+        piano_roll = next(state)
+        if piano_roll is None:
+            return None
+
+        # shape (time, pitch)
+        x = np.zeros((len(piano_roll), self.piano_roll_dim), dtype=np.int8)
+        for i, vertical_slice in enumerate(piano_roll):
+            # set the on pitches to 1
+            x[i, vertical_slice] = 1
+        return (x,)
+
+    @property
+    def num_examples(self):
+        return len(self.piano_rolls)
+
+
 def get_dataset(which_set):
     #datadir = os.environ["UNIQUE_MID_DIR"]
     datadir = os.environ["JSBCHORALES_DIR"]
     files = glob.glob(os.path.join(datadir, which_set, "*.mid"))
     return MidiFiles(files)
 
-def get_stream(which_set, shuffle=True, max_examples=None, batch_size=10):
-    dataset = get_dataset(which_set)
+
+def get_dataset_pianoroll(which_set):
+    datadir = os.environ["JSBCHORALES_PIANOROLL_DIR"]
+    fname = 'JSB Chorales.pickle'
+    pickle_fpath = os.path.join(datadir, fname)
+    with open(pickle_fpath, 'rb') as p:
+        data = pickle.load(p)
+    return PianoRolls(data[which_set])
+
+
+def get_stream(which_set, shuffle=True, max_examples=None, batch_size=10,
+               piano_roll=True):
+    if piano_roll:
+        dataset = get_dataset_pianoroll(which_set)
+    else:
+        dataset = get_dataset(which_set)
     num_examples = dataset.num_examples
     if max_examples:
         num_examples = min(max_examples, num_examples)

@@ -8,6 +8,7 @@ import extensions
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
+
 def main():
     # shape (batch, time, pitch)
     xs = T.tensor3("features")
@@ -15,7 +16,8 @@ def main():
     mask = T.matrix("features_mask")
 
     theano.config.compute_test_value = "warn"
-    test_batch = next(dataset.get_stream("train", max_examples=11).get_epoch_iterator(as_dict=True))
+    test_batch = next(dataset.get_stream("train", max_examples=11,
+                                         piano_roll=True).get_epoch_iterator(as_dict=True))
     xs.tag.test_value = test_batch["features"][:11]
     mask.tag.test_value = test_batch["features_mask"][:11]
 
