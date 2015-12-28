@@ -92,7 +92,7 @@ def main():
         biases_init=blocks.initialization.Constant(0))
     lstm = blocks.bricks.recurrent.LSTM(
         dim=recurrent_dim,
-        weights_init=blocks.initialization.Uniform(std=1e-2),
+        weights_init=initialization.GlorotInitialization(),
         biases_init=blocks.initialization.Constant(0))
     h_to_y = blocks.bricks.MLP(
         name="h_to_y",
@@ -105,15 +105,8 @@ def main():
     lstm.initialize()
     h_to_y.initialize()
 
-    blocks.initialization.Constant(1).initialize(
-        x_to_h.linear_transformations[-1].b, None)
-
-    orthogonal = blocks.initialization.Orthogonal()
-    W_state = lstm.W_state.get_value()
-    for i in range(4):
-        W_state[:, i*recurrent_dim:(i+1)*recurrent_dim] = orthogonal.generate(
-            lstm.rng, (recurrent_dim, recurrent_dim))
-    lstm.W_state.set_value(W_state)
+    initialization.lstm_identity_initialize(lstm)
+    initialization.lstm_bias_initialize(lstm, x_to_h.linear_transformations[-1].b)
 
     def stepfn(x, h, c):
         u = x_to_h.apply(x)
@@ -174,20 +167,29 @@ def main():
 
     step_channels = []
     for key, parameter in model.get_parameter_dict().items():
-        step_channels.append(algorithm.steps[parameter].norm(2)
-                             .copy(name="step_norm:%s" % key))
+        step_channels.extend([algorithm.steps[parameter].norm(2)
+                              .copy(name="step_norm:%s" % key),
+                              algorithm.gradients[parameter].norm(2)
+                              .copy(name="gradient_norm:%s" % key)])
+    step_channels.extend([algorithm.total_step_norm.copy(name="total_step_norm"),
+                          algorithm.total_gradient_norm.copy(name="total_gradient_norm")])
 
     activations = [
         hs.mean().copy(name="states.mean"),
         cs.mean().copy(name="cells.mean")]
 
-    monitors = [
+    monitors = []
+    monitors.append(blocks.extensions.monitoring.TrainingDataMonitoring(
+        step_channels,
+        prefix="iteration"))
+    monitors.extend(
         blocks.extensions.monitoring.DataStreamMonitoring(
-            graph.outputs + activations + (step_channels if which_set == "train" else []),
+            graph.outputs + activations,
             data_stream=dataset.get_stream(which_set, max_examples=100),
             prefix=which_set,
             after_epoch=True)
-        for which_set in "train test".split()]
+        for which_set in "train test".split())
+
     main_loop = blocks.main_loop.MainLoop(
         data_stream=dataset.get_stream("train"),
         model=model, algorithm=algorithm,
