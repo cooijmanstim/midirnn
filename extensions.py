@@ -13,7 +13,8 @@ class Generate(blocks.extensions.SimpleExtension):
         xs = np.random.multinomial(4, [1./self.pitch_dim]*self.pitch_dim,
                                    size=(10, 2))
         # stretch the chords out a bit over time
-        xs = np.repeat(xs, 10, axis=1)
+        # (not needed for JSB piano rolls)
+        #xs = np.repeat(xs, 10, axis=1)
         ys = self.generate_fn(xs)
         path = self.path.format(epoch=self.main_loop.status["epochs_done"])
         np.savez(path, xs=np.concatenate([xs, ys], axis=1))
