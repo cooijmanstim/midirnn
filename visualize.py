@@ -8,8 +8,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def plot_matrix(xs):
-    plt.matshow(xs[:, 0, :].T, cmap='gray')
+def plot_matrices(xs):
+    for x in xs:
+        plt.matshow(x.T, cmap='gray')
     plt.show()
 
 
@@ -27,13 +28,13 @@ def retrieve_most_recent_fname():
 
 def plot_sample(fname):
     xs = load_from_npz(fname)
-    plot_matrix(xs)
+    plot_matrices(xs)
 
 
 def plot_most_recent_sample():
     fname = retrieve_most_recent_fname()
     xs = load_from_npz(fname)
-    plot_matrix(xs)
+    plot_matrices(xs)
 
 
 if __name__ == "__main__":
