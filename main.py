@@ -152,7 +152,7 @@ def main():
     prediction_cost.name = "prediction_cost"
 
     # train convdown to reconstruct training examples while keeping convup fixed
-    reconstruction_cost = ((convdown(ys_up) - ys_down)**2).mean()
+    reconstruction_cost = ((convdown(ys_up) - ys_down)**2 * mask[:, 1:]).mean()
     reconstruction_cost.name = "reconstruction_cost"
 
     cost = prediction_cost + reconstruction_cost
