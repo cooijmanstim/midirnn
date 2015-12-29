@@ -1,10 +1,14 @@
 import os, glob
 import logging
-import cPickle as pickle
 import numpy as np
 import fuel.datasets, fuel.streams, fuel.schemes, fuel.transformers
 from picklable_itertools import iter_, chain
 import pretty_midi
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import six.moves.cPickle as pickle
 
 logger = logging.getLogger(__name__)
 
